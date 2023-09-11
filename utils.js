@@ -94,7 +94,19 @@ requestIdleCallback(workLoop); // 这里需要先调用一次，才能触发工�
 
 // 该方法用于创建fiber对象
 // 遍历顺序：深度优先，当前节点A->子节点B->当前节点A的兄弟节点->当前节点的父节点的兄弟节点
-// fiber参数：即使用createElement方法的返回值: {"type":"h1","props":{"title":"foo","children":[{type:'h1',props:{}}]}}
+/* 
+fiber参数：即使用createElement方法的返回值: {"type":"h1","props":{"title":"foo","children":[{type:'h1',props:{}}]}}
+返回值
+{
+  type:h1,
+  props:{title:'foo',children:[]}
+  dom:<div></div>  // 真实的dom结构
+  parent: fiber, // 父fiber对象，包含相同的结构属性
+  child: fiber,
+  sibling:fiber
+}
+
+*/
 function performUnitOfWork(fiber) {
   // 1.创建真实html节点
   if (!fiber.dom) {
@@ -167,7 +179,7 @@ function commitWork(fiber) {
 
 //====================================================实现render方法开始============================================================
 let nextUnitOfWork = null;
-let wipRoot = null;
+let wipRoot = null; // 当前需要渲染的fiber树
 
 // 该方法用于赋值nextUnitOfWork
 function render(element, container) {
