@@ -2,11 +2,61 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=
+    , initial-scale=1.0"
+    />
     <title>Document</title>
   </head>
   <body>
     <div id="root"></div>
+    <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+    <script>
+      /*
+      react中的代码: 
+      const element = <h1 title="foo">Hello</h1>;
+      const container = document.getElementById('root');
+      ReactDOM.render(element, container);
+      */
+
+      // 使用js实现:
+      /* 
+      1. const element = <h1 title="foo">Hello</h1>; -> 使用babel编译，会转换为React.createElement方法
+      React.createElement参数说明
+        - 1: 当前节点标签
+        - 2: 需要添加到该节点上的属性
+        - 3+: 节点的子节点
+      React.createElement输出对象:
+        {"type":"h1","props":{"title":"foo","children":"Hello"},"key":null,"ref":null,"_owner":null,"_store":{}}
+      */
+      const element = React.createElement('h1', { title: 'foo' }, 'Hello');
+
+      const container = document.getElementById('root');
+
+      /*
+        3. ReactDOM.render(element, container);
+        实现步骤：
+        1. 创建当前节点
+        2. 创建子节点
+        3. 将子节点添加到当前节点上
+        4. 将当前节点添加到container上
+      */
+
+      // 1. 创建当前节点
+      const node = document.createElement(element.type);
+      node['title'] = element.props.title;
+
+      // 2. 创建子节点
+      const childNode = document.createTextNode('');
+      childNode['nodeValue'] = element.props.children;
+
+      // 3. 将子节点添加到当前节点上
+      node.appendChild(childNode);
+
+      //4. 将当前节点添加到container上
+      container.appendChild(node);
+    </script>
   </body>
 </html>
