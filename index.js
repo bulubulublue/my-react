@@ -1,3 +1,5 @@
+// ===================================================实现createElement方法开始=========================
+
 /*
         React.createElement参数说明
             - 1: 当前节点标签
@@ -40,11 +42,43 @@ function createTextNode(text) {
   };
 }
 
+//*****************************************************实现createElement方法结束****************************************************
+
+//====================================================实现render方法开始============================================================
+/*
+    传入参数:
+    1. 由createElement生成的对象： {"type":"h1","props":{"title":"foo","children":[{type:'h1',props:{}}]}}
+    2. 根节点
+*/
+function render(element, container) {
+  // 挂载父节点
+  const dom =
+    element.type === TEXT_ELEMENT
+      ? document.createTextNode('')
+      : document.createElement(element.type);
+
+  // 添加除了children外的props属性
+  Object.keys(element.props)
+    .filter(key => key !== 'children')
+    .forEach(key => {
+      dom[key] = element.props[key];
+    });
+
+  // 挂载子节点
+  element.props.children.forEach(item => {
+    render(item, dom);
+  });
+  container.appendChild(dom);
+}
+
+//****************************************************实现render方法结束*************************************************************
+
 const MyReact = {
   createElement,
+  render,
 };
 
-// =====================================实际渲染===============================
+// =====================================测试用===============================
 
 /** @jsx MyReact.createElement */
 const element = (
@@ -54,6 +88,5 @@ const element = (
   </div>
 );
 
-console.log(element);
 const container = document.getElementById('root');
-ReactDOM.render(element, container);
+MyReact.render(element, container);
