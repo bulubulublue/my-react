@@ -1,0 +1,5 @@
+分支说明
+0: create-with-react-api: 使用react中的api实现html的渲染
+1: my-create-element: 实现React.createElement方法
+2：my-render: 实现React.render方法
+3：concurrent-mode: 实现react中的concurrent模式
