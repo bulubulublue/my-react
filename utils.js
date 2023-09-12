@@ -146,10 +146,48 @@ function workLoop(deadline) {
 
 requestIdleCallback(workLoop); // 这里需要先调用一次，才能触发工作
 
-// 该方法用于创建fiber对象
-// 遍历顺序：深度优先，当前节点A->子节点B->当前节点A的兄弟节点->当前节点的父节点的兄弟节点
-// fiber参数：即使用createElement方法的返回值: {"type":"h1","props":{"title":"foo","children":[{type:'h1',props:{}}]}}
+/* 该方法用于创建fiber对象
+   遍历顺序：深度优先，当前节点A->子节点B->当前节点A的兄弟节点->当前节点的父节点的兄弟节点
+   fiber参数：
+    1. 如果是纯html，即使用createElement方法的返回值: {"type":"h1","props":{"title":"foo","children":[{type:'h1',props:{}}]}}
+    2. 如果是方法函数，则是{type:App, props:{ name: "foo"}}, 其中App是一个函数，如下：
+        function App(props) {
+          return MyReact.createElement(
+            "h1",
+            null,
+            "Hi ",
+            props.name
+          )
+        }
+*/
 function performUnitOfWork(fiber) {
+  const isFunctionComponent = fiber.type instanceof Function;
+  if (isFunctionComponent) {
+    updateFunctionComponent(fiber);
+  } else {
+    updateHostComponent(fiber);
+  }
+
+  //4. 返回下一个需要工作的fiber对象
+  if (fiber.child) {
+    return fiber.child; // 如果有子节点，则返回第一个子节点
+  }
+
+  let nextFiber = fiber;
+  while (nextFiber) {
+    if (nextFiber.sibling) {
+      return nextFiber.sibling; // 如果有兄弟节点，则返回兄弟节点
+    }
+    nextFiber = nextFiber.parent; // 如果都没有则遍历上一层（返回上一层的兄弟节点）
+  }
+}
+
+function updateFunctionComponent(fiber) {
+  const children = [fiber.type(fiber.props)]; // 通过调用fiber.type方法来获取子节点对象
+  reconcilChild(fiber, children);
+}
+
+function updateHostComponent(fiber) {
   // 1.创建真实html节点
   if (!fiber.dom) {
     fiber.dom = createDom(fiber);
@@ -164,19 +202,6 @@ function performUnitOfWork(fiber) {
   const elements = fiber.props.children;
 
   reconcilChild(fiber, elements);
-
-  //4. 返回下一个需要工作的fiber对象
-  if (fiber.child) {
-    return fiber.child; // 如果有子节点，则返回第一个子节点
-  }
-
-  let nextFiber = fiber;
-  while (nextFiber) {
-    if (nextFiber.sibling) {
-      return nextFiber.sibling; // 如果有兄弟节点，则返回兄弟节点
-    }
-    nextFiber = nextFiber.parent; // 如果都没有则遍历上一层（返回上一层的兄弟节点）
-  }
 }
 //*************************************************实现concurrent mode结束**********************************************************
 
@@ -265,10 +290,29 @@ function reconcilChild(wipFiber, elements) {
 //*************************************************reconcil方法结束*****************************************************************
 
 //================================================commit方法开始====================================================================
-
+/*
+  如果是函数组件，最后的fiber树结构类似：
+  {
+    alternat: null
+    child: 
+      {
+        alternate: null
+        child: {type: 'h1', props: {…}, dom: h1, parent: {…}, alternate: null, …} // 在child里存储实际函数返回的dom结构
+        dom: null //这里的dom会是null
+        effectTag: "PLACEMENT"
+        parent: {dom: div#root, props: {…}, alternate: null, child: {…}}
+        props: {name: 'foo', children: Array(0)}
+        type: ƒ App(props) // type是个函数
+      }
+    dom: div#root
+    props: {children: Array(1)}
+  }
+*/
 function commitRoot() {
   deletions.forEach(commitWork);
+  // console.log(wipRoot);
   commitWork(wipRoot.child); // wipRoot:指id为root的根节点
+
   currentRoot = wipRoot;
   wipRoot = null;
 }
@@ -278,23 +322,37 @@ function commitWork(fiber) {
     return;
   }
 
-  const domParent = fiber.parent.dom;
+  // 如果是函数组件，则没有dom属性，所以需要一路向上找到有dom属性的父组件
+  let domParentFiber = fiber.parent;
+  while (!domParentFiber.dom) {
+    domParentFiber = domParentFiber.parent;
+  }
+  const domParent = domParentFiber.dom;
+
   //添加节点
-  if (fiber.effectTag === 'PLACEMENT' && fiber.dom != null) {
+  if (fiber.effectTag === 'PLACEMENT' && fiber.dom) {
     domParent.appendChild(fiber.dom);
-  } else if (fiber.effectTag === 'UPDATE' && fiber.dom !== null) {
+  } else if (fiber.effectTag === 'UPDATE' && fiber.dom) {
     //修改节点
     updateDom(fiber.dom, fiber.alternate.props, fiber.props);
   } else if (fiber.effectTag === 'DELETION') {
     //删除节点
+    commitDeletion(fiber, domParent);
     domParent.removeChild(fiber.dom);
   }
 
-  domParent.appendChild(fiber.dom);
   commitWork(fiber.child);
   commitWork(fiber.sibling);
 }
 
+function commitDeletion(fiber, domParent) {
+  // fiber如果是函数组件，则没有dom结构，dom结构会存储在child上
+  if (fiber.dom) {
+    domParent.removeChild(fiber.dom);
+  } else {
+    commitDeletion(fiber.child, domParent);
+  }
+}
 //*****************************************************commit方法结束***************************************************************
 
 //====================================================实现render方法开始============================================================
