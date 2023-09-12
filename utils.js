@@ -78,7 +78,7 @@ function createDom(fiber) {
 const isProperty = key => key !== 'children'; // 如果是children属性，则不处理
 const isNew = (prev, next) => key => prev[key] !== next[key]; // 如果新旧属性不一致，则表示需要更新属性值
 const isGone = next => key => !(key in next); // 如果旧属性key不在新属性中，则需要删除旧属性
-const isEvent = key => key.startWith('on');
+const isEvent = key => key.startsWith('on');
 
 /*
   输入参数
@@ -90,7 +90,9 @@ function updateDom(dom, prevProps, nextProps) {
   // 移除旧监听事件， 因为属性是onClick, addEventListener中对应的是'click'
   Object.keys(prevProps)
     .filter(isEvent)
-    .filter(key => isGone(nextProps) || isNew(prevProps, nextProps)(key))
+    .filter(key => {
+      return isGone(nextProps) || isNew(prevProps, nextProps)(key);
+    })
     .forEach(name => {
       const eventType = name.toLowerCase().substring(2);
       dom.removeEventListener(eventType, prevProps[name]);
@@ -107,9 +109,9 @@ function updateDom(dom, prevProps, nextProps) {
   //添加新增或者修改的属性
   Object.keys(nextProps)
     .filter(isProperty)
-    .filter(isNew(prevProps))
+    .filter(isNew(prevProps, nextProps))
     .forEach(name => {
-      dom[name] = nextProps;
+      dom[name] = nextProps[name];
     });
 
   // 添加新监听事件
@@ -207,7 +209,7 @@ function reconcilChild(wipFiber, elements) {
   let oldFiber = wipFiber.alternate && wipFiber.alternate.child; // wipFiber.alternate: 第一个循环的时候即root节点
   let prevSibling = null;
 
-  while (index < elements.length || oldFiber !== null) {
+  while (index < elements.length || oldFiber) {
     // index > elements.length且oldFiber!==null的情况：同一层children中，新节点已遍历完毕，而仍有旧节点
     const element = elements[index];
     let newFiber = null;
@@ -216,7 +218,6 @@ function reconcilChild(wipFiber, elements) {
 
     const sameType = oldFiber && element && element.type === oldFiber.type; // 新旧节点标签相同
 
-    console.log(elements, sameType, element);
     if (sameType) {
       // 如果新旧节点标签相同，则更新新节点
       newFiber = {
@@ -313,7 +314,6 @@ function render(element, container) {
   };
   nextUnitOfWork = wipRoot;
   deletions = [];
-  console.log(wipRoot);
 }
 
 //****************************************************实现render方法结束*************************************************************
