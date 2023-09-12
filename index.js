@@ -1,7 +1,5 @@
 import { MyReact } from './utils';
 
-// =====================================测试用===============================
-
 /** @jsx MyReact.createElement */
 const element = (
   <div id="foo">
@@ -12,3 +10,15 @@ const element = (
 
 const container = document.getElementById('root');
 MyReact.render(element, container);
+
+setTimeout(() => {
+  /** @jsx MyReact.createElement */
+  const elementNew = (
+    <div id="foo">
+      <h1>bar</h1>
+      <div>test2</div>
+    </div>
+  );
+
+  MyReact.render(elementNew, container);
+}, 5000);
