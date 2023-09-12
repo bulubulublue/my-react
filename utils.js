@@ -408,6 +408,7 @@ let wipFiber = null; // 当前处理的fiber对象
 let hookIndex = null;
 
 // 该方法用于参数的初始化
+// element:即用React.createElement方法生成的对象
 function render(element, container) {
   wipRoot = {
     dom: container,
