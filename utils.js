@@ -181,7 +181,7 @@ function performUnitOfWork(fiber) {
 function updateFunctionComponent(fiber) {
   wipFiber = fiber;
   hookIndex = 0;
-  wipFiber.hooks = [];
+  wipFiber.hooks = []; // 初始渲染html结构，先把index和hooks重置
   const children = [fiber.type(fiber.props)]; // 通过调用fiber.type方法来获取子节点对象
   reconcilChild(fiber, children);
 }
@@ -189,6 +189,15 @@ function updateFunctionComponent(fiber) {
 /*
   参数:
   1. initial: 调用useState时传入的初始值
+*/
+/*
+  第一次渲染：alternate为空，在调用函数组件时，会调用useState方法；由于oldHook为空，所有hook.state设为初始值，actions为空数组；并将该状态添加到wipFiber上
+  当调用setState时
+  1. 将setState的回调函数添加到对应fiber的hook queue中
+  2. 赋值wipRoot,触发渲染过程, 函数组件会重新执行，从而useState方法也会重新执行
+  3. 此时alternate即第一次渲染的fiber树，actions数组中已经添加了setState方法，因而会调用queue中的setState方法，重新赋值state的值
+
+
 */
 function useState(initial) {
   const oldHook =
