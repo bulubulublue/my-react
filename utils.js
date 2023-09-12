@@ -65,12 +65,7 @@ function createDom(fiber) {
   const dom =
     fiber.type === TEXT_ELEMENT ? document.createTextNode('') : document.createElement(fiber.type);
 
-  // 添加除了children外的props属性
-  Object.keys(fiber.props)
-    .filter(key => key !== 'children')
-    .forEach(key => {
-      dom[key] = fiber.props[key];
-    });
+  updateDom(dom, {}, fiber.props);
 
   return dom;
 }
@@ -290,7 +285,6 @@ function commitWork(fiber) {
     domParent.removeChild(fiber.dom);
   }
 
-  domParent.appendChild(fiber.dom);
   commitWork(fiber.child);
   commitWork(fiber.sibling);
 }
