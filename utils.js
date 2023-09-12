@@ -65,12 +65,7 @@ function createDom(fiber) {
   const dom =
     fiber.type === TEXT_ELEMENT ? document.createTextNode('') : document.createElement(fiber.type);
 
-  // 添加除了children外的props属性
-  Object.keys(fiber.props)
-    .filter(key => key !== 'children')
-    .forEach(key => {
-      dom[key] = fiber.props[key];
-    });
+  updateDom(dom, {}, fiber.props);
 
   return dom;
 }
@@ -120,6 +115,7 @@ function updateDom(dom, prevProps, nextProps) {
     .filter(isNew(prevProps, nextProps))
     .forEach(name => {
       const eventType = name.toLowerCase().substring(2);
+
       dom.addEventListener(eventType, nextProps[name]);
     });
 }
@@ -183,8 +179,47 @@ function performUnitOfWork(fiber) {
 }
 
 function updateFunctionComponent(fiber) {
+  wipFiber = fiber;
+  hookIndex = 0;
+  wipFiber.hooks = [];
   const children = [fiber.type(fiber.props)]; // 通过调用fiber.type方法来获取子节点对象
   reconcilChild(fiber, children);
+}
+
+/*
+  参数:
+  1. initial: 调用useState时传入的初始值
+*/
+function useState(initial) {
+  const oldHook =
+    wipFiber.alternate && wipFiber.alternate.hooks && wipFiber.alternate.hooks[hookIndex];
+
+  const hook = {
+    state: oldHook ? oldHook.state : initial,
+    queue: [],
+  };
+
+  const actions = oldHook ? oldHook.queue : [];
+  actions.forEach(action => {
+    hook.state = action(hook.state);
+  });
+
+  const setState = action => {
+    hook.queue.push(action);
+
+    //这里和render方法一样，给wipRoot赋值，这样可以触发工作流，并且从新的wipRoot开始进行渲染
+    wipRoot = {
+      dom: currentRoot.dom,
+      props: currentRoot.props,
+      alternate: currentRoot,
+    };
+    nextUnitOfWork = wipRoot;
+    deletions = [];
+  };
+
+  wipFiber.hooks.push(hook);
+  hookIndex++;
+  return [hook.state, setState];
 }
 
 function updateHostComponent(fiber) {
@@ -360,6 +395,8 @@ let nextUnitOfWork = null;
 let wipRoot = null; // 当前需要渲染的fiber树
 let currentRoot = null; // 上一次渲染的fiber树
 let deletions = null;
+let wipFiber = null; // 当前处理的fiber对象
+let hookIndex = null;
 
 // 该方法用于参数的初始化
 function render(element, container) {
@@ -379,4 +416,5 @@ function render(element, container) {
 export const MyReact = {
   createElement,
   render,
+  useState,
 };
